@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Micro Invernadero</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Hojas que caen de fondo -->
+  <div class="hojas" aria-hidden="true">
+    <span class="hoja" style="--x:6%;--dur:14s;--d:0s">🍃</span>
+    <span class="hoja" style="--x:18%;--dur:18s;--d:3s">🌿</span>
+    <span class="hoja" style="--x:30%;--dur:12s;--d:7s">🍀</span>
+    <span class="hoja" style="--x:45%;--dur:16s;--d:2s">🌱</span>
+    <span class="hoja" style="--x:58%;--dur:13s;--d:5s">🍃</span>
+    <span class="hoja" style="--x:70%;--dur:19s;--d:9s">🌿</span>
+    <span class="hoja" style="--x:82%;--dur:15s;--d:1s">🍀</span>
+    <span class="hoja" style="--x:92%;--dur:17s;--d:6s">🌱</span>
+  </div>
+
+  <div class="panel">
+    <div class="cabecera">
+      <div class="sol" aria-hidden="true">☀️</div>
+      <h1>🌱 Mi Micro Invernadero</h1>
+      <p class="sub">Cuidamos nuestras plantitas con un ESP32-CAM 🌿</p>
+    </div>
+
+    <div class="estado">
+      <span id="dot" class="dot"></span>
+      <span id="estado">Conectando...</span>
+      <span id="hora"></span>
+    </div>
+
+    <!-- Valores actuales del DHT22 -->
+    <div class="grid2">
+      <div class="tarjeta destacada temp">
+        <div class="icono" aria-hidden="true">🌡️</div>
+        <div class="valor" id="temp">--</div>
+        <div class="etiqueta">Temperatura</div>
+      </div>
+      <div class="tarjeta destacada hum">
+        <div class="icono" aria-hidden="true">💧</div>
+        <div class="valor" id="hum">--</div>
+        <div class="etiqueta">Humedad</div>
+      </div>
+    </div>
+
+    <!-- Última foto subida a Drive -->
+    <div class="tarjeta foto">
+      <div class="fotoTitulo">📷 Nuestro invernadero ahora</div>
+      <img id="foto" alt="Última foto" src="">
+      <div class="fotoFecha" id="fotoFecha">Cargando última foto...</div>
+    </div>
+
+    <!-- Gráficos de ThingSpeak -->
+    <div class="grid1">
+      <div class="tarjeta graficoTarjeta">
+        <div class="graficoTitulo">🌡️ Temperatura · última hora</div>
+        <iframe class="grafico" data-reload data-src="https://thingspeak.mathworks.com/channels/3442379/charts/1?bgcolor=%23ffffff&amp;color=%23d62020&amp;dynamic=true&amp;max=40&amp;min=10&amp;results=120&amp;title=TEMPERATURA&amp;type=line" title="Gráfico temperatura"></iframe>
+      </div>
+      <div class="tarjeta graficoTarjeta">
+        <div class="graficoTitulo">💧 Humedad · última hora</div>
+        <iframe class="grafico" data-reload data-src="https://thingspeak.mathworks.com/channels/3442379/charts/2?bgcolor=%23ffffff&amp;color=%23d62020&amp;dynamic=true&amp;max=100&amp;min=0&amp;results=120&amp;title=HUMEDAD&amp;type=line" title="Gráfico humedad"></iframe>
+      </div>
+    </div>
+
+    <p class="nota">Los datos y las fotos se actualizan solos 🌻</p>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
