@@ -4,15 +4,21 @@ const CHANNEL_ID = 3442379;
 // Read API Key: se puede dejar aunque el canal sea público (no molesta).
 const READ_API_KEY = "N67ZWO1TGBA77FNL";
 
-// URL del APPS SCRIPT NUEVO (después de redeployar con la función "accion=ultima").
-// Pegá acá la URL que termina en /exec del NUEVO deployment.
-const APPS_SCRIPT_FOTOS_URL = "https://script.google.com/macros/s/AKfycbzb4IOCLv6jrXg5k4YQBxqUSmLvxfCDKcu9EI1c0iP4BWsUzHWHBIpepp3d-6zvPGkV/exec";
+// URL del APPS SCRIPT (después de redeployar con las funciones
+// "accion=ultima" y "accion=listar"). Pegá acá la URL que termina en /exec
+// del NUEVO deployment.
+const APPS_SCRIPT_FOTOS_URL = "https://script.google.com/macros/s/AKfycbxZ6Co7OjrWXhqq7Nxcgjp2TXekdKEsZM8Oxe8bDByPOoi351akA2KlxSJaImJdPU14/exec";
 
 // Ritmos de refresco (los datos suben cada 30 s, las fotos cada 60 s).
 const POLL_DATOS_MS = 10000;       // estado + valores actuales
 const POLL_FOTO_MS = 60000;        // última foto
 const POLL_IFRAME_MS = 60000;      // recarga de los gráficos de ThingSpeak
 const MAX_ANTIGUEDAD_S = 90;       // si la lectura tiene más que esto, marca "sin datos"
+
+// Write API Key: se usa para mandar el comando del buzzer desde la página.
+// En un proyecto de producción esto iría por un proxy del lado del servidor,
+// pero para un proyecto escolar está bien directo.
+const WRITE_API_KEY = "JX7QTC0X482DVM3O";
 
 const API_URL =
   "https://api.thingspeak.com/channels/" + CHANNEL_ID +
@@ -68,6 +74,7 @@ let ultimoIdFoto = null;
 
 async function cargarFoto() {
   if (!APPS_SCRIPT_FOTOS_URL.startsWith("http")) return; // placeholder sin configurar
+  if (tl.activo) return;   // mientras corre el timelapse, no pisar la foto
 
   try {
     const resp = await fetch(APPS_SCRIPT_FOTOS_URL + "?accion=ultima&t=" + Date.now(), { cache: "no-store" });
@@ -90,6 +97,166 @@ async function cargarFoto() {
     // No romper la página si el endpoint de fotos falla
     console.log("Foto: " + e.message);
   }
+}
+
+// ----- Timelapse (reproduce las últimas fotos en secuencia) -----
+let tl = { activo: false, fotos: [], idx: 0, timer: null, ms: 2000 };
+
+function iniciarTimelapse() {
+  if (tl.activo) {
+    pausarTimelapse();
+    return;
+  }
+  if (!APPS_SCRIPT_FOTOS_URL.startsWith("http")) return;
+
+  elem("timelapseBtn").textContent = "Cargando...";
+  fetch(APPS_SCRIPT_FOTOS_URL + "?accion=listar&n=15&t=" + Date.now(), { cache: "no-store" })
+    .then((r) => r.json())
+    .then((datos) => {
+      if (!datos.success || !datos.fotos || datos.fotos.length < 2) {
+        elem("timelapseBtn").textContent = "▶ Timelapse";
+        alert("Todavía no hay suficientes fotos para el timelapse (se necesitan al menos 2).");
+        return;
+      }
+      tl.activo = true;
+      tl.fotos = datos.fotos;
+      tl.idx = 0;
+      elem("timelapseBtn").textContent = "⏸ Pausar";
+      mostrarFrameTimelapse();
+      programarTimelapse();
+    })
+    .catch(() => {
+      elem("timelapseBtn").textContent = "▶ Timelapse";
+    });
+}
+
+function mostrarFrameTimelapse() {
+  const f = tl.fotos[tl.idx];
+  if (!f) return;
+  elem("foto").src = "data:image/jpeg;base64," + f.base64;
+  elem("fotoFecha").textContent =
+    "Timelapse · " + new Date(f.creada).toLocaleString();
+  elem("tlProgreso").textContent = (tl.idx + 1) + "/" + tl.fotos.length;
+  tl.idx = (tl.idx + 1) % tl.fotos.length;
+}
+
+function programarTimelapse() {
+  tl.timer = setTimeout(() => {
+    if (!tl.activo) return;
+    mostrarFrameTimelapse();
+    programarTimelapse();
+  }, tl.ms);
+}
+
+function pausarTimelapse() {
+  tl.activo = false;
+  clearTimeout(tl.timer);
+  elem("timelapseBtn").textContent = "▶ Timelapse";
+}
+
+function volverAlVivo() {
+  pausarTimelapse();
+  elem("tlProgreso").textContent = "";
+  ultimoIdFoto = null;   // forzar a recargar la última foto subida
+  cargarFoto();
+}
+
+function cambiarVelocidad(btn) {
+  tl.ms = parseInt(btn.dataset.ms, 10) || 2000;
+  document.querySelectorAll(".btn.vel").forEach((b) => b.classList.remove("act"));
+  btn.classList.add("act");
+}
+
+// ----- Buzzer (comando desde la página vía ThingSpeak) -----
+// Escribe field3=1 directo en ThingSpeak. El ESP32 sondea ese campo cada 5 s
+// y, cuando ve una entrada nueva con "1", hace sonar el buzzer.
+function enviarComandoBuzzer(btn) {
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = "Enviando...";
+
+  fetch("https://api.thingspeak.com/update?api_key=" + WRITE_API_KEY + "&field3=1")
+    .then((r) => r.text())
+    .then((entrada) => {
+      if (entrada && entrada !== "0") {
+        btn.textContent = "¡Sonando!";
+      } else {
+        btn.textContent = "Error";
+        alert("ThingSpeak no aceptó el comando. Probá de nuevo en unos segundos.");
+      }
+    })
+    .catch(() => { btn.textContent = "Error"; })
+    .finally(() => {
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.disabled = false;
+      }, 4000);
+    });
+}
+
+// ----- Captura inmediata (field5 de ThingSpeak) -----
+// Escribe field5=1 en ThingSpeak. El ESP32 toma una foto al instante.
+function capturarFoto(btn) {
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = "Capturando...";
+
+  fetch("https://api.thingspeak.com/update?api_key=" + WRITE_API_KEY + "&field5=1")
+    .then((r) => r.text())
+    .then((entrada) => {
+      if (entrada && entrada !== "0") {
+        btn.textContent = "¡Foto tomada!";
+        // Recargar la foto después de ~15 s (tiempo para que suba a Drive)
+        setTimeout(() => {
+          ultimoIdFoto = null;
+          cargarFoto();
+        }, 15000);
+      } else {
+        btn.textContent = "Error";
+        alert("ThingSpeak no aceptó el comando.");
+      }
+    })
+    .catch(() => { btn.textContent = "Error"; })
+    .finally(() => {
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.disabled = false;
+      }, 4000);
+    });
+}
+
+// ----- Intervalo de fotos (field4 de ThingSpeak) -----
+// Escribe la cantidad de SEGUNDOS entre fotos en field4.
+// El ESP32 lee ese campo cada 5 s y ajusta el intervalo automáticamente.
+function cambiarIntervalo(btn) {
+  const seg = btn.dataset.seg;
+  enviarIntervalo(seg, btn);
+}
+
+function cambiarIntervaloCustom() {
+  const input = document.getElementById("intervaloInput");
+  const seg = parseInt(input.value, 10);
+  if (isNaN(seg) || seg < 15) {
+    alert("Mínimo 15 segundos.");
+    return;
+  }
+  enviarIntervalo(seg, null);
+}
+
+function enviarIntervalo(seg, btn) {
+  fetch("https://api.thingspeak.com/update?api_key=" + WRITE_API_KEY + "&field4=" + seg)
+    .then((r) => r.text())
+    .then((entrada) => {
+      if (entrada && entrada !== "0") {
+        if (btn) {
+          btn.classList.add("act");
+          setTimeout(() => btn.classList.remove("act"), 2000);
+        }
+      } else {
+        alert("ThingSpeak no aceptó el intervalo.");
+      }
+    })
+    .catch(() => alert("Error de conexión"));
 }
 
 // ----- Gráficos de ThingSpeak: ancho explícito (no se cortan) + refresco -----

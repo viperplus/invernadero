@@ -26,8 +26,8 @@
   <div class="panel">
     <div class="cabecera">
       <div class="sol" aria-hidden="true">☀️</div>
-      <h1>🌱 Mi Micro Invernadero</h1>
-      <p class="sub">Cuidamos nuestras plantitas con un ESP32-CAM 🌿</p>
+      <h1>🌱 El Micro invernadero del Rural.</h1>
+      <p class="sub">Un proyecto de cuarto año para el abordaje de los ambientes controlados</p>
     </div>
 
     <div class="estado">
@@ -55,6 +55,28 @@
       <div class="fotoTitulo">📷 Nuestro invernadero ahora</div>
       <img id="foto" alt="Última foto" src="">
       <div class="fotoFecha" id="fotoFecha">Cargando última foto...</div>
+      <div class="tlc">
+        <button class="btn capture" onclick="capturarFoto(this)">📸 Capturar</button>
+        <button class="btn sonido" onclick="enviarComandoBuzzer(this)">🔔 Buzzer</button>
+        <button id="timelapseBtn" class="btn" onclick="iniciarTimelapse()">▶ Timelapse</button>
+        <button class="btn vivo" onclick="volverAlVivo()">● EN VIVO</button>
+        <span id="tlVelocidad" class="tlVel">
+          <button class="btn vel" data-ms="4000" onclick="cambiarVelocidad(this)">4s</button>
+          <button class="btn vel act" data-ms="2000" onclick="cambiarVelocidad(this)">2s</button>
+          <button class="btn vel" data-ms="1000" onclick="cambiarVelocidad(this)">1s</button>
+        </span>
+        <span id="tlProgreso" class="tlProgreso"></span>
+      </div>
+      <!-- Control de intervalo de fotos -->
+      <div class="tlc intervalo">
+        <span class="intLabel">📸 Cada:</span>
+        <button class="btn int" data-seg="30" onclick="cambiarIntervalo(this)">30s</button>
+        <button class="btn int" data-seg="60" onclick="cambiarIntervalo(this)">1 min</button>
+        <button class="btn int" data-seg="120" onclick="cambiarIntervalo(this)">2 min</button>
+        <button class="btn int" data-seg="300" onclick="cambiarIntervalo(this)">5 min</button>
+        <input id="intervaloInput" class="intInput" type="number" min="15" max="3600" placeholder="seg">
+        <button class="btn int" onclick="cambiarIntervaloCustom()">OK</button>
+      </div>
     </div>
 
     <!-- Gráficos de ThingSpeak -->
@@ -70,6 +92,7 @@
     </div>
 
     <p class="nota">Los datos y las fotos se actualizan solos 🌻</p>
+    <p class="nota esc">ESRN Rural Virtual</p>
   </div>
 
   <script src="script.js"></script>
