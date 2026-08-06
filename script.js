@@ -304,3 +304,6 @@ setInterval(cargarDatos, POLL_DATOS_MS);
 
 cargarFoto();
 setInterval(cargarFoto, POLL_FOTO_MS);
+
+// Aplicar filtros de imagen por defecto (saturación 30%)
+aplicarFiltros();
