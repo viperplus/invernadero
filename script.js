@@ -266,8 +266,7 @@ function aplicarFiltros() {
   const brillo = document.getElementById("ajBrillo").value;
   const contraste = document.getElementById("ajContraste").value;
   const saturacion = document.getElementById("ajSaturacion").value;
-  const matiz = document.getElementById("ajMatiz").value;
-  const filtro = "brightness(" + brillo + "%) contrast(" + contraste + "%) saturate(" + saturacion + "%) hue-rotate(" + matiz + "deg)";
+  const filtro = "brightness(" + brillo + "%) contrast(" + contraste + "%) saturate(" + saturacion + "%)";
   elem("foto").style.filter = filtro;
 }
 
@@ -275,7 +274,6 @@ function resetearFiltros() {
   document.getElementById("ajBrillo").value = 100;
   document.getElementById("ajContraste").value = 100;
   document.getElementById("ajSaturacion").value = 30;
-  document.getElementById("ajMatiz").value = 0;
   aplicarFiltros();
 }
 
