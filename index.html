@@ -77,6 +77,20 @@
         <input id="intervaloInput" class="intInput" type="number" min="15" max="3600" placeholder="seg">
         <button class="btn int" onclick="cambiarIntervaloCustom()">OK</button>
       </div>
+      <!-- Ajustes de imagen (solo visual en la página) -->
+      <div class="tlc ajustes">
+        <span class="intLabel">🎨 Ajustar foto:</span>
+        <label class="ajusteLbl">Brillo
+          <input type="range" id="ajBrillo" min="50" max="200" value="100" oninput="aplicarFiltros()">
+        </label>
+        <label class="ajusteLbl">Contraste
+          <input type="range" id="ajContraste" min="50" max="200" value="100" oninput="aplicarFiltros()">
+        </label>
+        <label class="ajusteLbl">Saturación
+          <input type="range" id="ajSaturacion" min="0" max="200" value="30" oninput="aplicarFiltros()">
+        </label>
+        <button class="btn int" onclick="resetearFiltros()">Reset</button>
+      </div>
     </div>
 
     <!-- Gráficos de ThingSpeak -->

@@ -259,6 +259,24 @@ function enviarIntervalo(seg, btn) {
     .catch(() => alert("Error de conexión"));
 }
 
+// ----- Ajustes de imagen (solo visual, CSS filters) -----
+// Aplica filtros CSS a la foto para ajustar cómo se ve en la página.
+// No modifica la foto original en Drive.
+function aplicarFiltros() {
+  const brillo = document.getElementById("ajBrillo").value;
+  const contraste = document.getElementById("ajContraste").value;
+  const saturacion = document.getElementById("ajSaturacion").value;
+  const filtro = "brightness(" + brillo + "%) contrast(" + contraste + "%) saturate(" + saturacion + "%)";
+  elem("foto").style.filter = filtro;
+}
+
+function resetearFiltros() {
+  document.getElementById("ajBrillo").value = 100;
+  document.getElementById("ajContraste").value = 100;
+  document.getElementById("ajSaturacion").value = 30;
+  aplicarFiltros();
+}
+
 // ----- Gráficos de ThingSpeak: ancho explícito (no se cortan) + refresco -----
 // ThingSpeak dibuja el gráfico a los pixels que le pases en width/height.
 // Se recalcula al cargar y al redimensionar la ventana.
