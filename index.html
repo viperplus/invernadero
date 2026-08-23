@@ -28,6 +28,7 @@
       <div class="sol" aria-hidden="true">☀️</div>
       <h1>🌱 El Micro invernadero del Rural.</h1>
       <p class="sub">Un proyecto de cuarto año para el abordaje de los ambientes controlados</p>
+      <img class="germinador" src="Geminador.jpeg" alt="Nuestro germinador">
     </div>
 
     <div class="estado">
@@ -57,7 +58,7 @@
       <div class="fotoFecha" id="fotoFecha">Cargando última foto...</div>
       <div class="tlc">
         <button class="btn capture" onclick="capturarFoto(this)">📸 Capturar</button>
-        <button class="btn sonido" onclick="enviarComandoBuzzer(this)">🔔 Buzzer</button>
+        <button id="flashBtn" class="btn flash" onclick="alternarFlash(this)">⚡ Flash: OFF</button>
         <button id="timelapseBtn" class="btn" onclick="iniciarTimelapse()">▶ Timelapse</button>
         <button class="btn vivo" onclick="volverAlVivo()">● EN VIVO</button>
         <span id="tlVelocidad" class="tlVel">
@@ -87,7 +88,7 @@
           <input type="range" id="ajContraste" min="50" max="200" value="100" oninput="aplicarFiltros()">
         </label>
         <label class="ajusteLbl">Saturación
-          <input type="range" id="ajSaturacion" min="0" max="200" value="30" oninput="aplicarFiltros()">
+          <input type="range" id="ajSaturacion" min="0" max="200" value="100" oninput="aplicarFiltros()">
         </label>
         <button class="btn int" onclick="resetearFiltros()">Reset</button>
       </div>
@@ -97,11 +98,11 @@
     <div class="grid1">
       <div class="tarjeta graficoTarjeta">
         <div class="graficoTitulo">🌡️ Temperatura · última hora</div>
-        <iframe class="grafico" data-reload data-src="https://thingspeak.mathworks.com/channels/3442379/charts/1?bgcolor=%23ffffff&amp;color=%23d62020&amp;dynamic=true&amp;max=40&amp;min=10&amp;results=120&amp;title=TEMPERATURA&amp;type=line" title="Gráfico temperatura"></iframe>
+        <iframe class="grafico" data-reload data-src="https://thingspeak.mathworks.com/channels/3442379/charts/1?bgcolor=%23ffffff&amp;color=%23d62020&amp;dynamic=true&amp;max=40&amp;min=15&amp;results=120&amp;title=TEMPERATURA&amp;type=line" title="Gráfico temperatura"></iframe>
       </div>
       <div class="tarjeta graficoTarjeta">
         <div class="graficoTitulo">💧 Humedad · última hora</div>
-        <iframe class="grafico" data-reload data-src="https://thingspeak.mathworks.com/channels/3442379/charts/2?bgcolor=%23ffffff&amp;color=%23d62020&amp;dynamic=true&amp;max=100&amp;min=0&amp;results=120&amp;title=HUMEDAD&amp;type=line" title="Gráfico humedad"></iframe>
+        <iframe class="grafico" data-reload data-src="https://thingspeak.mathworks.com/channels/3442379/charts/2?bgcolor=%23ffffff&amp;color=%23d62020&amp;dynamic=true&amp;max=100&amp;min=20&amp;results=120&amp;title=HUMEDAD&amp;type=line" title="Gráfico humedad"></iframe>
       </div>
     </div>
 

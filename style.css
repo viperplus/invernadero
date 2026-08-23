@@ -96,6 +96,17 @@ h1 {
   font-size: 16px;
 }
 
+.germinador {
+  display: block;
+  width: 100%;
+  max-width: 300px;
+  margin: 14px auto 0;
+  border-radius: 14px;
+  border: 3px solid #bfe3b4;
+  box-shadow: 0 4px 14px rgba(47, 125, 50, 0.25);
+  object-fit: cover;
+}
+
 /* ---------- Estado ---------- */
 .estado {
   display: flex;
@@ -306,18 +317,23 @@ h1 {
   animation: latidoVivo 2s ease-in-out infinite;
 }
 
-.btn.sonido {
+.btn.capture {
+  background: linear-gradient(180deg, #5bb8f5 0%, #2196f3 100%);
+  box-shadow: 0 3px 8px rgba(33, 150, 243, 0.35);
+  font-size: 13px;
+  padding: 6px 12px;
+}
+
+.btn.flash {
   background: linear-gradient(180deg, #f6a821 0%, #e08a00 100%);
   box-shadow: 0 3px 8px rgba(224, 138, 0, 0.35);
   font-size: 13px;
   padding: 6px 12px;
 }
 
-.btn.capture {
-  background: linear-gradient(180deg, #5bb8f5 0%, #2196f3 100%);
-  box-shadow: 0 3px 8px rgba(33, 150, 243, 0.35);
-  font-size: 13px;
-  padding: 6px 12px;
+.btn.flash.act {
+  background: linear-gradient(180deg, #ffd54d 0%, #ffb300 100%);
+  box-shadow: 0 3px 12px rgba(255, 179, 0, 0.6);
 }
 
 .btn:disabled {

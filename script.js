@@ -11,13 +11,13 @@ const APPS_SCRIPT_FOTOS_URL = "https://script.google.com/macros/s/AKfycbxZ6Co7Oj
 
 // Ritmos de refresco (los datos suben cada 30 s, las fotos cada 60 s).
 const POLL_DATOS_MS = 10000;       // estado + valores actuales
-const POLL_FOTO_MS = 60000;        // última foto
+const POLL_FOTO_MS = 30000;        // última foto
 const POLL_IFRAME_MS = 60000;      // recarga de los gráficos de ThingSpeak
 const MAX_ANTIGUEDAD_S = 90;       // si la lectura tiene más que esto, marca "sin datos"
 
-// Write API Key: se usa para mandar el comando del buzzer desde la página.
-// En un proyecto de producción esto iría por un proxy del lado del servidor,
-// pero para un proyecto escolar está bien directo.
+// Write API Key: se usa para mandar los comandos (captura de foto e
+// intervalo) desde la página. En un proyecto de producción esto iría por un
+// proxy del lado del servidor, pero para un proyecto escolar está bien directo.
 const WRITE_API_KEY = "JX7QTC0X482DVM3O";
 
 const API_URL =
@@ -71,10 +71,11 @@ async function cargarDatos() {
 
 // ----- Última foto de Drive (Apps Script) -----
 let ultimoIdFoto = null;
+let esperandoFotoNueva = false;
 
 async function cargarFoto() {
   if (!APPS_SCRIPT_FOTOS_URL.startsWith("http")) return; // placeholder sin configurar
-  if (tl.activo) return;   // mientras corre el timelapse, no pisar la foto
+  if (tl.activo || esperandoFotoNueva) return;   // no pisar la foto durante timelapse o espera
 
   try {
     const resp = await fetch(APPS_SCRIPT_FOTOS_URL + "?accion=ultima&t=" + Date.now(), { cache: "no-store" });
@@ -167,31 +168,59 @@ function cambiarVelocidad(btn) {
   btn.classList.add("act");
 }
 
-// ----- Buzzer (comando desde la página vía ThingSpeak) -----
-// Escribe field3=1 directo en ThingSpeak. El ESP32 sondea ese campo cada 5 s
-// y, cuando ve una entrada nueva con "1", hace sonar el buzzer.
-function enviarComandoBuzzer(btn) {
-  btn.disabled = true;
-  const original = btn.textContent;
-  btn.textContent = "Enviando...";
+// ----- Flash (field6 de ThingSpeak) -----
+// Escribe field6=0/1. El ESP32 lo lee cada 5 s y toma TODAS las fotos
+// (automáticas y manuales) con o sin flash según este ajuste.
+function actualizarBotonFlash(encendido) {
+  const btn = elem("flashBtn");
+  btn.textContent = encendido ? "⚡ Flash: ON" : "⚡ Flash: OFF";
+  btn.classList.toggle("act", encendido);
+}
 
-  fetch("https://api.thingspeak.com/update?api_key=" + WRITE_API_KEY + "&field3=1")
+function alternarFlash(btn) {
+  const nuevoEstado = !btn.classList.contains("act");
+  btn.disabled = true;
+  fetch("https://api.thingspeak.com/update?api_key=" + WRITE_API_KEY + "&field6=" + (nuevoEstado ? 1 : 0))
     .then((r) => r.text())
     .then((entrada) => {
       if (entrada && entrada !== "0") {
-        btn.textContent = "¡Sonando!";
+        actualizarBotonFlash(nuevoEstado);
       } else {
-        btn.textContent = "Error";
-        alert("ThingSpeak no aceptó el comando. Probá de nuevo en unos segundos.");
+        alert("ThingSpeak no aceptó el comando.");
       }
     })
-    .catch(() => { btn.textContent = "Error"; })
-    .finally(() => {
-      setTimeout(() => {
-        btn.textContent = original;
-        btn.disabled = false;
-      }, 4000);
-    });
+    .catch(() => alert("Error de conexión"))
+    .finally(() => { btn.disabled = false; });
+}
+
+// Al abrir la página, refleja el estado real del flash guardado en ThingSpeak.
+function sincronizarFlash() {
+  fetch("https://api.thingspeak.com/channels/" + CHANNEL_ID + "/fields/6/last.json", { cache: "no-store" })
+    .then((r) => r.json())
+    .then((d) => actualizarBotonFlash(String(d.field6) === "1"))
+    .catch(() => {});
+}
+
+// Espera a que suba la foto nueva tras una captura y la muestra apenas aparezca.
+// Sondea cada 8 s hasta 10 intentos (~80 s máximo).
+async function esperarFotoNueva() {
+  const idPrevio = ultimoIdFoto;
+  esperandoFotoNueva = true;
+  for (let i = 0; i < 10 && esperandoFotoNueva; i++) {
+    await new Promise((r) => setTimeout(r, 8000));
+    try {
+      const resp = await fetch(APPS_SCRIPT_FOTOS_URL + "?accion=ultima&t=" + Date.now(), { cache: "no-store" });
+      const datos = await resp.json();
+      if (datos.success && datos.id && datos.id !== idPrevio && datos.id !== ultimoIdFoto) {
+        ultimoIdFoto = datos.id;
+        elem("foto").src = "data:image/jpeg;base64," + datos.base64;
+        elem("fotoFecha").textContent =
+          "Última foto: " + new Date(datos.creada).toLocaleString();
+        break;
+      }
+    } catch (e) {}
+  }
+  esperandoFotoNueva = false;
 }
 
 // ----- Captura inmediata (field5 de ThingSpeak) -----
@@ -206,11 +235,8 @@ function capturarFoto(btn) {
     .then((entrada) => {
       if (entrada && entrada !== "0") {
         btn.textContent = "¡Foto tomada!";
-        // Recargar la foto después de ~15 s (tiempo para que suba a Drive)
-        setTimeout(() => {
-          ultimoIdFoto = null;
-          cargarFoto();
-        }, 15000);
+        // Sondear cada 8 s hasta que aparezca la foto nueva en Drive
+        esperarFotoNueva();
       } else {
         btn.textContent = "Error";
         alert("ThingSpeak no aceptó el comando.");
@@ -273,7 +299,7 @@ function aplicarFiltros() {
 function resetearFiltros() {
   document.getElementById("ajBrillo").value = 100;
   document.getElementById("ajContraste").value = 100;
-  document.getElementById("ajSaturacion").value = 30;
+  document.getElementById("ajSaturacion").value = 100;
   aplicarFiltros();
 }
 
@@ -305,5 +331,8 @@ setInterval(cargarDatos, POLL_DATOS_MS);
 cargarFoto();
 setInterval(cargarFoto, POLL_FOTO_MS);
 
-// Aplicar filtros de imagen por defecto (saturación 30%)
+// Reflejar el estado real del flash al abrir la página
+sincronizarFlash();
+
+// Aplicar filtros por defecto (valores neutros, colores naturales)
 aplicarFiltros();
