@@ -11,7 +11,7 @@ const APPS_SCRIPT_FOTOS_URL = "https://script.google.com/macros/s/AKfycbxZ6Co7Oj
 
 // Ritmos de refresco (los datos suben cada 30 s, las fotos cada 60 s).
 const POLL_DATOS_MS = 10000;       // estado + valores actuales
-const POLL_FOTO_MS = 15000;        // chequeo de foto nueva (liviano, sin imagen)
+const POLL_FOTO_MS = 10000;        // chequeo de foto nueva (liviano, sin imagen)
 const POLL_IFRAME_MS = 60000;      // recarga de los gráficos de ThingSpeak
 const MAX_ANTIGUEDAD_S = 90;       // si la lectura tiene más que esto, marca "sin datos"
 
@@ -96,32 +96,41 @@ async function traerUltimaCompleta() {
 }
 
 // Muestra la foto directo desde los servidores de Google (rápido).
-// Las fotos viejas sin compartir pueden fallar -> hay un fallback abajo.
+// Usa lh3.googleusercontent.com, que sirve la imagen compartida sin vueltas.
+// Si falla, el listener de error prueba drive.google.com/thumbnail y por
+// último el método pesado de descargar el base64.
 function mostrarFoto(id, creada) {
   ultimoIdFoto = id;
   elem("foto").dataset.reintentos = "0";
-  elem("foto").src = "https://drive.google.com/thumbnail?id=" + id + "&sz=w1200";
+  elem("foto").src = "https://lh3.googleusercontent.com/d/" + id + "=w1200";
   elem("fotoFecha").textContent =
     creada ? "Última foto: " + new Date(creada).toLocaleString() : "Última foto";
 }
 
-// Si la miniatura de Drive falla: reintenta un par de veces (a las fotos
-// recién subidas les puede tardar en generarse la vista previa) y recién
-// ahí cae al método pesado de descargar el base64 desde Apps Script.
+// Reintentos en cascada si la imagen no carga:
+//   intento 1 -> drive.google.com/thumbnail (vista previa de Drive)
+//   intento 2+ -> descargar el base64 completo desde Apps Script
 elem("foto").addEventListener("error", () => {
   const src = elem("foto").src || "";
-  if (src.indexOf("drive.google.com/thumbnail") >= 0) {
-    const reintentos = parseInt(elem("foto").dataset.reintentos || "0", 10);
-    if (reintentos < 2) {
-      elem("foto").dataset.reintentos = String(reintentos + 1);
-      setTimeout(() => { elem("foto").src = src; }, 5000);
-      return;
-    }
+  if (!src || src.indexOf("data:image") === 0) return;
+
+  const reintentos = parseInt(elem("foto").dataset.reintentos || "0", 10);
+  const idActual = ultimoIdFoto;
+
+  if (reintentos < 1 && idActual && src.indexOf("lh3.googleusercontent.com") >= 0) {
+    elem("foto").dataset.reintentos = String(reintentos + 1);
+    setTimeout(() => {
+      if (ultimoIdFoto === idActual) {
+        elem("foto").src = "https://drive.google.com/thumbnail?id=" + idActual + "&sz=w1200";
+      }
+    }, 3000);
+    return;
   }
+
   if (!APPS_SCRIPT_FOTOS_URL.startsWith("http") || tl.activo) return;
   traerUltimaCompleta()
     .then((datos) => {
-      if (datos.success && datos.base64) {
+      if (datos.success && datos.base64 && datos.id === idActual) {
         elem("foto").src = "data:image/jpeg;base64," + datos.base64;
         elem("fotoFecha").textContent =
           datos.creada ? "Última foto: " + new Date(datos.creada).toLocaleString() : "Última foto";
