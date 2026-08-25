@@ -11,7 +11,7 @@ const APPS_SCRIPT_FOTOS_URL = "https://script.google.com/macros/s/AKfycbxZ6Co7Oj
 
 // Ritmos de refresco (los datos suben cada 30 s, las fotos cada 60 s).
 const POLL_DATOS_MS = 10000;       // estado + valores actuales
-const POLL_FOTO_MS = 30000;        // última foto
+const POLL_FOTO_MS = 15000;        // chequeo de foto nueva (liviano, sin imagen)
 const POLL_IFRAME_MS = 60000;      // recarga de los gráficos de ThingSpeak
 const MAX_ANTIGUEDAD_S = 90;       // si la lectura tiene más que esto, marca "sin datos"
 
@@ -73,30 +73,100 @@ async function cargarDatos() {
 let ultimoIdFoto = null;
 let esperandoFotoNueva = false;
 
+// Consulta LIVIANA: pide solo id y fecha de la última foto (pocos bytes).
+// Si el Apps Script publicado todavía no tiene este endpoint (deployment
+// viejo), devuelve null y las funciones caen al método clásico.
+async function consultarMeta() {
+  try {
+    const resp = await fetch(APPS_SCRIPT_FOTOS_URL + "?accion=ultimaMeta&t=" + Date.now(), { cache: "no-store" });
+    const texto = await resp.text();
+    if (!texto.trim().startsWith("{")) return null;   // respuesta no-JSON = script viejo
+    const meta = JSON.parse(texto);
+    if (!meta.success) return null;
+    return meta;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Descarga la última foto completa en base64 (método pesado).
+async function traerUltimaCompleta() {
+  const resp = await fetch(APPS_SCRIPT_FOTOS_URL + "?accion=ultima&t=" + Date.now(), { cache: "no-store" });
+  return resp.json();
+}
+
+// Muestra la foto directo desde los servidores de Google (rápido).
+// Las fotos viejas sin compartir pueden fallar -> hay un fallback abajo.
+function mostrarFoto(id, creada) {
+  ultimoIdFoto = id;
+  elem("foto").dataset.reintentos = "0";
+  elem("foto").src = "https://drive.google.com/thumbnail?id=" + id + "&sz=w1200";
+  elem("fotoFecha").textContent =
+    creada ? "Última foto: " + new Date(creada).toLocaleString() : "Última foto";
+}
+
+// Si la miniatura de Drive falla: reintenta un par de veces (a las fotos
+// recién subidas les puede tardar en generarse la vista previa) y recién
+// ahí cae al método pesado de descargar el base64 desde Apps Script.
+elem("foto").addEventListener("error", () => {
+  const src = elem("foto").src || "";
+  if (src.indexOf("drive.google.com/thumbnail") >= 0) {
+    const reintentos = parseInt(elem("foto").dataset.reintentos || "0", 10);
+    if (reintentos < 2) {
+      elem("foto").dataset.reintentos = String(reintentos + 1);
+      setTimeout(() => { elem("foto").src = src; }, 5000);
+      return;
+    }
+  }
+  if (!APPS_SCRIPT_FOTOS_URL.startsWith("http") || tl.activo) return;
+  traerUltimaCompleta()
+    .then((datos) => {
+      if (datos.success && datos.base64) {
+        elem("foto").src = "data:image/jpeg;base64," + datos.base64;
+        elem("fotoFecha").textContent =
+          datos.creada ? "Última foto: " + new Date(datos.creada).toLocaleString() : "Última foto";
+      }
+    })
+    .catch(() => {});
+});
+
+// Evita que las consultas se pisen: si la anterior sigue en curso (Apps Script
+// lento), el próximo tick del intervalo no arranca otra encima.
+let cargandoFotoEnCurso = false;
+
 async function cargarFoto() {
+  if (cargandoFotoEnCurso) return;
   if (!APPS_SCRIPT_FOTOS_URL.startsWith("http")) return; // placeholder sin configurar
   if (tl.activo || esperandoFotoNueva) return;   // no pisar la foto durante timelapse o espera
 
+  cargandoFotoEnCurso = true;
   try {
-    const resp = await fetch(APPS_SCRIPT_FOTOS_URL + "?accion=ultima&t=" + Date.now(), { cache: "no-store" });
-    const datos = await resp.json();
+    const meta = await consultarMeta();
 
-    if (!datos.success || !datos.id || !datos.base64) {
-      elem("foto").src = "";
-      elem("fotoFecha").textContent = "Sin fotos todavía";
-      ultimoIdFoto = null;
-      return;
-    }
-
-    if (datos.id !== ultimoIdFoto) {
-      ultimoIdFoto = datos.id;
-      elem("foto").src = "data:image/jpeg;base64," + datos.base64;
-      elem("fotoFecha").textContent =
-        "Última foto: " + new Date(datos.creada).toLocaleString();
+    if (meta) {
+      // Camino rápido: solo pide id y fecha, la imagen la sirve Google
+      if (!meta.id) {
+        elem("fotoFecha").textContent = "Sin fotos todavía";
+        return;
+      }
+      if (meta.id === ultimoIdFoto) return;
+      mostrarFoto(meta.id, meta.creada);
+    } else {
+      // Camino clásico (Apps Script sin actualizar)
+      const datos = await traerUltimaCompleta();
+      if (!datos.success || !datos.id || !datos.base64) {
+        elem("foto").src = "";
+        elem("fotoFecha").textContent = "Sin fotos todavía";
+        ultimoIdFoto = null;
+        return;
+      }
+      if (datos.id !== ultimoIdFoto) mostrarFoto(datos.id, datos.creada);
     }
   } catch (e) {
     // No romper la página si el endpoint de fotos falla
     console.log("Foto: " + e.message);
+  } finally {
+    cargandoFotoEnCurso = false;
   }
 }
 
@@ -202,21 +272,30 @@ function sincronizarFlash() {
 }
 
 // Espera a que suba la foto nueva tras una captura y la muestra apenas aparezca.
-// Sondea cada 8 s hasta 10 intentos (~80 s máximo).
+// Con el script actualizado sondea el endpoint liviano cada 4 s (20 intentos);
+// con el script viejo, baja y compara la foto completa cada 8 s (10 intentos).
 async function esperarFotoNueva() {
   const idPrevio = ultimoIdFoto;
   esperandoFotoNueva = true;
-  for (let i = 0; i < 10 && esperandoFotoNueva; i++) {
-    await new Promise((r) => setTimeout(r, 8000));
+  const usaMeta = (await consultarMeta()) !== null;
+  const intentos = usaMeta ? 20 : 10;
+  const pausa = usaMeta ? 4000 : 8000;
+
+  for (let i = 0; i < intentos && esperandoFotoNueva; i++) {
+    await new Promise((r) => setTimeout(r, pausa));
     try {
-      const resp = await fetch(APPS_SCRIPT_FOTOS_URL + "?accion=ultima&t=" + Date.now(), { cache: "no-store" });
-      const datos = await resp.json();
-      if (datos.success && datos.id && datos.id !== idPrevio && datos.id !== ultimoIdFoto) {
-        ultimoIdFoto = datos.id;
-        elem("foto").src = "data:image/jpeg;base64," + datos.base64;
-        elem("fotoFecha").textContent =
-          "Última foto: " + new Date(datos.creada).toLocaleString();
-        break;
+      if (usaMeta) {
+        const meta = await consultarMeta();
+        if (meta && meta.id && meta.id !== idPrevio) {
+          mostrarFoto(meta.id, meta.creada);
+          break;
+        }
+      } else {
+        const datos = await traerUltimaCompleta();
+        if (datos.success && datos.base64 && datos.id && datos.id !== idPrevio) {
+          mostrarFoto(datos.id, datos.creada);
+          break;
+        }
       }
     } catch (e) {}
   }
