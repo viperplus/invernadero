@@ -7,7 +7,7 @@ const READ_API_KEY = "N67ZWO1TGBA77FNL";
 // URL del APPS SCRIPT (después de redeployar con las funciones
 // "accion=ultima" y "accion=listar"). Pegá acá la URL que termina en /exec
 // del NUEVO deployment.
-const APPS_SCRIPT_FOTOS_URL = "https://script.google.com/macros/s/AKfycbxZ6Co7OjrWXhqq7Nxcgjp2TXekdKEsZM8Oxe8bDByPOoi351akA2KlxSJaImJdPU14/exec";
+const APPS_SCRIPT_FOTOS_URL = "https://script.google.com/macros/s/AKfycbzIu6ETc3UhdBa4IuNQdCEbYrAurNugTP-MI-cDt_M_Z1dS5WS_rYazAGTp5oXnU1RH0w/exec";
 
 // Ritmos de refresco (los datos suben cada 30 s, las fotos cada 60 s).
 const POLL_DATOS_MS = 10000;       // estado + valores actuales
@@ -78,7 +78,7 @@ let esperandoFotoNueva = false;
 // viejo), devuelve null y las funciones caen al método clásico.
 async function consultarMeta() {
   try {
-    const resp = await fetch(APPS_SCRIPT_FOTOS_URL + "?accion=ultimaMeta&t=" + Date.now(), { cache: "no-store" });
+    const resp = await fetch(APPS_SCRIPT_FOTOS_URL + "?accion=ultimaMeta&camara=cam02&t=" + Date.now(), { cache: "no-store" });
     const texto = await resp.text();
     if (!texto.trim().startsWith("{")) return null;   // respuesta no-JSON = script viejo
     const meta = JSON.parse(texto);
@@ -91,7 +91,7 @@ async function consultarMeta() {
 
 // Descarga la última foto completa en base64 (método pesado).
 async function traerUltimaCompleta() {
-  const resp = await fetch(APPS_SCRIPT_FOTOS_URL + "?accion=ultima&t=" + Date.now(), { cache: "no-store" });
+  const resp = await fetch(APPS_SCRIPT_FOTOS_URL + "?accion=ultima&camara=cam02&t=" + Date.now(), { cache: "no-store" });
   return resp.json();
 }
 
@@ -190,7 +190,7 @@ function iniciarTimelapse() {
   if (!APPS_SCRIPT_FOTOS_URL.startsWith("http")) return;
 
   elem("timelapseBtn").textContent = "Cargando...";
-  fetch(APPS_SCRIPT_FOTOS_URL + "?accion=listar&n=15&t=" + Date.now(), { cache: "no-store" })
+  fetch(APPS_SCRIPT_FOTOS_URL + "?accion=listar&camara=cam02&n=15&t=" + Date.now(), { cache: "no-store" })
     .then((r) => r.json())
     .then((datos) => {
       if (!datos.success || !datos.fotos || datos.fotos.length < 2) {
