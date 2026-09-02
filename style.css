@@ -287,6 +287,34 @@ h1 {
   margin-top: 8px;
 }
 
+.fotoLoader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px;
+  color: #6b8177;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.fotoLoader.oculto {
+  display: none;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #cfe8bd;
+  border-top-color: #4c9c3a;
+  border-radius: 50%;
+  animation: girar 0.8s linear infinite;
+}
+
+@keyframes girar {
+  to { transform: rotate(360deg); }
+}
+
 /* ---------- Controles de timelapse ---------- */
 .tlc {
   display: flex;
@@ -324,31 +352,11 @@ h1 {
   box-shadow: 0 3px 8px rgba(214, 69, 58, 0.35);
 }
 
-.btn.vivo {
-  background: #ffffff;
-  color: #16a34a;
-  border: 2px solid #22c55e;
-  box-shadow: 0 3px 8px rgba(34, 197, 94, 0.35);
-  animation: latidoVivo 2s ease-in-out infinite;
-}
-
 .btn.capture {
   background: linear-gradient(180deg, #5bb8f5 0%, #2196f3 100%);
   box-shadow: 0 3px 8px rgba(33, 150, 243, 0.35);
   font-size: 13px;
   padding: 6px 12px;
-}
-
-.btn.flash {
-  background: linear-gradient(180deg, #f6a821 0%, #e08a00 100%);
-  box-shadow: 0 3px 8px rgba(224, 138, 0, 0.35);
-  font-size: 13px;
-  padding: 6px 12px;
-}
-
-.btn.flash.act {
-  background: linear-gradient(180deg, #ffd54d 0%, #ffb300 100%);
-  box-shadow: 0 3px 12px rgba(255, 179, 0, 0.6);
 }
 
 .btn:disabled {
@@ -431,41 +439,6 @@ h1 {
   cursor: pointer;
 }
 
-@keyframes latidoVivo {
-  0%, 100% { box-shadow: 0 3px 8px rgba(34, 197, 94, 0.35); }
-  50% { box-shadow: 0 3px 14px rgba(34, 197, 94, 0.75); }
-}
-
-.tlVel {
-  display: inline-flex;
-  gap: 4px;
-  background: #eef6e7;
-  border-radius: 999px;
-  padding: 4px;
-}
-
-.btn.vel {
-  background: #ffffff;
-  color: #4c9c3a;
-  box-shadow: none;
-  border: 2px solid #cfe8bd;
-  padding: 4px 10px;
-  font-size: 13px;
-}
-
-.btn.vel.act {
-  background: linear-gradient(180deg, #66bb4f 0%, #4c9c3a 100%);
-  color: #ffffff;
-  border-color: #4c9c3a;
-}
-
-.tlProgreso {
-  font-size: 13px;
-  font-weight: 700;
-  color: #39524a;
-  min-width: 64px;
-}
-
 /* ---------- Gráficos ---------- */
 .graficoTitulo {
   font-size: 15px;
@@ -540,13 +513,36 @@ h1 {
   color: #23302b;
   line-height: 1.5;
   white-space: pre-wrap;
+  text-align: justify;
 }
 
 .postFecha {
   font-size: 12px;
   color: #6b8177;
   font-weight: 600;
-  margin-top: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #d4e8c6;
+  text-transform: capitalize;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.postBorrar {
+  font-size: 11px;
+  color: #999;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.postBorrar:hover {
+  color: #dc2626;
+  background: #fee2e2;
 }
 
 .blogToggle {

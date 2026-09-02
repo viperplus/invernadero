@@ -103,6 +103,8 @@ function mostrarFoto(id, creada) {
   ultimoIdFoto = id;
   elem("foto").dataset.reintentos = "0";
   elem("foto").src = "https://lh3.googleusercontent.com/d/" + id + "=w1200";
+  elem("foto").style.display = "block";
+  elem("fotoLoader").classList.add("oculto");
   elem("fotoFecha").textContent =
     creada ? "Última foto: " + new Date(creada).toLocaleString() : "Última foto";
 }
@@ -127,7 +129,7 @@ elem("foto").addEventListener("error", () => {
     return;
   }
 
-  if (!APPS_SCRIPT_FOTOS_URL.startsWith("http") || tl.activo) return;
+  if (!APPS_SCRIPT_FOTOS_URL.startsWith("http")) return;
   traerUltimaCompleta()
     .then((datos) => {
       if (datos.success && datos.base64 && datos.id === idActual) {
@@ -145,16 +147,16 @@ let cargandoFotoEnCurso = false;
 
 async function cargarFoto() {
   if (cargandoFotoEnCurso) return;
-  if (!APPS_SCRIPT_FOTOS_URL.startsWith("http")) return; // placeholder sin configurar
-  if (tl.activo || esperandoFotoNueva) return;   // no pisar la foto durante timelapse o espera
+  if (!APPS_SCRIPT_FOTOS_URL.startsWith("http")) return;
+  if (esperandoFotoNueva) return;
 
   cargandoFotoEnCurso = true;
   try {
     const meta = await consultarMeta();
 
     if (meta) {
-      // Camino rápido: solo pide id y fecha, la imagen la sirve Google
       if (!meta.id) {
+        elem("fotoLoader").classList.add("oculto");
         elem("fotoFecha").textContent = "Sin fotos todavía";
         return;
       }
@@ -172,117 +174,40 @@ async function cargarFoto() {
       if (datos.id !== ultimoIdFoto) mostrarFoto(datos.id, datos.creada);
     }
   } catch (e) {
-    // No romper la página si el endpoint de fotos falla
     console.log("Foto: " + e.message);
+    elem("fotoLoader").classList.add("oculto");
   } finally {
     cargandoFotoEnCurso = false;
   }
 }
 
-// ----- Timelapse (reproduce las últimas fotos en secuencia) -----
-let tl = { activo: false, fotos: [], idx: 0, timer: null, ms: 2000 };
-
-function iniciarTimelapse() {
-  if (tl.activo) {
-    pausarTimelapse();
-    return;
-  }
-  if (!APPS_SCRIPT_FOTOS_URL.startsWith("http")) return;
-
-  elem("timelapseBtn").textContent = "Cargando...";
-  fetch(APPS_SCRIPT_FOTOS_URL + "?accion=listar&camara=cam02&n=15&t=" + Date.now(), { cache: "no-store" })
-    .then((r) => r.json())
-    .then((datos) => {
-      if (!datos.success || !datos.fotos || datos.fotos.length < 2) {
-        elem("timelapseBtn").textContent = "▶ Timelapse";
-        alert("Todavía no hay suficientes fotos para el timelapse (se necesitan al menos 2).");
-        return;
-      }
-      tl.activo = true;
-      tl.fotos = datos.fotos;
-      tl.idx = 0;
-      elem("timelapseBtn").textContent = "⏸ Pausar";
-      mostrarFrameTimelapse();
-      programarTimelapse();
-    })
-    .catch(() => {
-      elem("timelapseBtn").textContent = "▶ Timelapse";
-    });
-}
-
-function mostrarFrameTimelapse() {
-  const f = tl.fotos[tl.idx];
-  if (!f) return;
-  elem("foto").src = "data:image/jpeg;base64," + f.base64;
-  elem("fotoFecha").textContent =
-    "Timelapse · " + new Date(f.creada).toLocaleString();
-  elem("tlProgreso").textContent = (tl.idx + 1) + "/" + tl.fotos.length;
-  tl.idx = (tl.idx + 1) % tl.fotos.length;
-}
-
-function programarTimelapse() {
-  tl.timer = setTimeout(() => {
-    if (!tl.activo) return;
-    mostrarFrameTimelapse();
-    programarTimelapse();
-  }, tl.ms);
-}
-
-function pausarTimelapse() {
-  tl.activo = false;
-  clearTimeout(tl.timer);
-  elem("timelapseBtn").textContent = "▶ Timelapse";
-}
-
-function volverAlVivo() {
-  pausarTimelapse();
-  elem("tlProgreso").textContent = "";
-  ultimoIdFoto = null;   // forzar a recargar la última foto subida
-  cargarFoto();
-}
-
-function cambiarVelocidad(btn) {
-  tl.ms = parseInt(btn.dataset.ms, 10) || 2000;
-  document.querySelectorAll(".btn.vel").forEach((b) => b.classList.remove("act"));
-  btn.classList.add("act");
-}
-
-// ----- Flash (field6 de ThingSpeak) -----
-// Escribe field6=0/1. El ESP32 lo lee cada 5 s y toma TODAS las fotos
-// (automáticas y manuales) con o sin flash según este ajuste.
-function actualizarBotonFlash(encendido) {
-  const btn = elem("flashBtn");
-  btn.textContent = encendido ? "⚡ Flash: ON" : "⚡ Flash: OFF";
-  btn.classList.toggle("act", encendido);
-}
-
-function alternarFlash(btn) {
-  const nuevoEstado = !btn.classList.contains("act");
+// ----- Captura inmediata (field5 de ThingSpeak) -----
+// Escribe field5=1 en ThingSpeak. El ESP32 toma una foto al instante.
+function capturarFoto(btn) {
   btn.disabled = true;
-  fetch("https://api.thingspeak.com/update?api_key=" + WRITE_API_KEY + "&field6=" + (nuevoEstado ? 1 : 0))
+  const original = btn.textContent;
+  btn.textContent = "Capturando...";
+
+  fetch("https://api.thingspeak.com/update?api_key=" + WRITE_API_KEY + "&field5=1")
     .then((r) => r.text())
     .then((entrada) => {
       if (entrada && entrada !== "0") {
-        actualizarBotonFlash(nuevoEstado);
+        btn.textContent = "¡Foto tomada!";
+        esperarFotoNueva();
       } else {
+        btn.textContent = "Error";
         alert("ThingSpeak no aceptó el comando.");
       }
     })
-    .catch(() => alert("Error de conexión"))
-    .finally(() => { btn.disabled = false; });
+    .catch(() => { btn.textContent = "Error"; })
+    .finally(() => {
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.disabled = false;
+      }, 4000);
+    });
 }
 
-// Al abrir la página, refleja el estado real del flash guardado en ThingSpeak.
-function sincronizarFlash() {
-  fetch("https://api.thingspeak.com/channels/" + CHANNEL_ID + "/fields/6/last.json", { cache: "no-store" })
-    .then((r) => r.json())
-    .then((d) => actualizarBotonFlash(String(d.field6) === "1"))
-    .catch(() => {});
-}
-
-// Espera a que suba la foto nueva tras una captura y la muestra apenas aparezca.
-// Con el script actualizado sondea el endpoint liviano cada 4 s (20 intentos);
-// con el script viejo, baja y compara la foto completa cada 8 s (10 intentos).
 async function esperarFotoNueva() {
   const idPrevio = ultimoIdFoto;
   esperandoFotoNueva = true;
@@ -309,34 +234,6 @@ async function esperarFotoNueva() {
     } catch (e) {}
   }
   esperandoFotoNueva = false;
-}
-
-// ----- Captura inmediata (field5 de ThingSpeak) -----
-// Escribe field5=1 en ThingSpeak. El ESP32 toma una foto al instante.
-function capturarFoto(btn) {
-  btn.disabled = true;
-  const original = btn.textContent;
-  btn.textContent = "Capturando...";
-
-  fetch("https://api.thingspeak.com/update?api_key=" + WRITE_API_KEY + "&field5=1")
-    .then((r) => r.text())
-    .then((entrada) => {
-      if (entrada && entrada !== "0") {
-        btn.textContent = "¡Foto tomada!";
-        // Sondear cada 8 s hasta que aparezca la foto nueva en Drive
-        esperarFotoNueva();
-      } else {
-        btn.textContent = "Error";
-        alert("ThingSpeak no aceptó el comando.");
-      }
-    })
-    .catch(() => { btn.textContent = "Error"; })
-    .finally(() => {
-      setTimeout(() => {
-        btn.textContent = original;
-        btn.disabled = false;
-      }, 4000);
-    });
 }
 
 // ----- Intervalo de fotos (field4 de ThingSpeak) -----
@@ -419,9 +316,6 @@ setInterval(cargarDatos, POLL_DATOS_MS);
 cargarFoto();
 setInterval(cargarFoto, POLL_FOTO_MS);
 
-// Reflejar el estado real del flash al abrir la página
-sincronizarFlash();
-
 // Aplicar filtros por defecto (valores neutros, colores naturales)
 aplicarFiltros();
 
@@ -442,14 +336,17 @@ function cargarPosts() {
         contenedor.innerHTML = '<div class="sinPosts">Todavía no hay publicaciones</div>';
         return;
       }
-      contenedor.innerHTML = datos.posts.map((p) => {
-        const fecha = new Date(p.fecha).toLocaleString();
+      contenedor.innerHTML = datos.posts.map((p, i) => {
+        const d = new Date(p.fecha);
+        const dia = d.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+        const hora = d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
         const img = p.imagenId
           ? '<img class="postImg" src="https://drive.google.com/uc?export=view&id=' + p.imagenId + '" alt="Post">'
           : '';
         return '<div class="post">' + img +
-          '<div class="postTexto">' + escapeHtml(p.texto) + '</div>' +
-          '<div class="postFecha">' + fecha + '</div></div>';
+          '<div class="postFecha">' + dia + ' · ' + hora +
+          ' <button class="postBorrar" onclick="borrarPost(' + i + ')" title="Borrar">✕</button></div>' +
+          '<div class="postTexto">' + escapeHtml(p.texto) + '</div></div>';
       }).join("");
     })
     .catch(() => {});
@@ -476,12 +373,10 @@ document.getElementById("postImagen").addEventListener("change", function () {
 
 function publicarPost() {
   const texto = document.getElementById("postTexto").value.trim();
-  const pass = document.getElementById("postPass").value;
   const estado = document.getElementById("postEstado");
   const archivo = document.getElementById("postImagen").files[0];
 
   if (!texto) { estado.textContent = "Escribí algo"; estado.className = "postEstado error"; return; }
-  if (!pass) { estado.textContent = "Poné la contraseña"; estado.className = "postEstado error"; return; }
 
   estado.textContent = "Publicando...";
   estado.className = "postEstado";
@@ -490,11 +385,11 @@ function publicarPost() {
     const reader = new FileReader();
     reader.onload = function (e) {
       const b64 = e.target.result.split(",")[1];
-      enviarPost({ accion: "nuevoPost", texto: texto, imagen: b64, contrasena: pass });
+      enviarPost({ accion: "nuevoPost", texto: texto, imagen: b64 });
     };
     reader.readAsDataURL(archivo);
   } else {
-    enviarPost({ accion: "nuevoPost", texto: texto, contrasena: pass });
+    enviarPost({ accion: "nuevoPost", texto: texto });
   }
 }
 
@@ -510,7 +405,6 @@ function enviarPost(payload) {
         estado.textContent = "¡Publicado!";
         estado.className = "postEstado ok";
         document.getElementById("postTexto").value = "";
-        document.getElementById("postPass").value = "";
         document.getElementById("postImagen").value = "";
         document.getElementById("blogPreview").innerHTML = "";
         cargarPosts();
@@ -528,3 +422,21 @@ function enviarPost(payload) {
 
 cargarPosts();
 setInterval(cargarPosts, 60000);
+
+function borrarPost(indice) {
+  const pass = prompt("Contraseña:");
+  if (!pass) return;
+  fetch(APPS_SCRIPT_FOTOS_URL, {
+    method: "POST",
+    body: JSON.stringify({ accion: "borrarPost", indice: indice, contrasena: pass })
+  })
+    .then((r) => r.json())
+    .then((datos) => {
+      if (datos.success) {
+        cargarPosts();
+      } else {
+        alert(datos.error || "Error al borrar");
+      }
+    })
+    .catch(() => alert("Error de conexión"));
+}

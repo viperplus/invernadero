@@ -54,19 +54,14 @@
     <!-- Última foto subida a Drive -->
     <div class="tarjeta foto">
       <div class="fotoTitulo">📷 Nuestro invernadero ahora</div>
-      <img id="foto" alt="Última foto" src="">
-      <div class="fotoFecha" id="fotoFecha">Cargando última foto...</div>
+      <div id="fotoLoader" class="fotoLoader">
+        <div class="spinner"></div>
+        <span>Cargando foto...</span>
+      </div>
+      <img id="foto" alt="Última foto" src="" style="display:none">
+      <div class="fotoFecha" id="fotoFecha"></div>
       <div class="tlc">
         <button class="btn capture" onclick="capturarFoto(this)">📸 Capturar</button>
-        <button id="flashBtn" class="btn flash" onclick="alternarFlash(this)">⚡ Flash: OFF</button>
-        <button id="timelapseBtn" class="btn" onclick="iniciarTimelapse()">▶ Timelapse</button>
-        <button class="btn vivo" onclick="volverAlVivo()">● EN VIVO</button>
-        <span id="tlVelocidad" class="tlVel">
-          <button class="btn vel" data-ms="4000" onclick="cambiarVelocidad(this)">4s</button>
-          <button class="btn vel act" data-ms="2000" onclick="cambiarVelocidad(this)">2s</button>
-          <button class="btn vel" data-ms="1000" onclick="cambiarVelocidad(this)">1s</button>
-        </span>
-        <span id="tlProgreso" class="tlProgreso"></span>
       </div>
       <!-- Control de intervalo de fotos -->
       <div class="tlc intervalo">
@@ -130,7 +125,6 @@
         </label>
         <div id="blogPreview" class="blogPreview"></div>
         <div class="blogFormRow">
-          <input type="password" id="postPass" placeholder="Contraseña">
           <button class="btn blogPublicar" onclick="publicarPost()">Publicar</button>
         </div>
         <div id="postEstado" class="postEstado"></div>
