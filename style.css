@@ -504,8 +504,9 @@ h1 {
   border-radius: 10px;
   display: block;
   margin-bottom: 8px;
-  max-height: 350px;
-  object-fit: cover;
+  max-height: 300px;
+  object-fit: contain;
+  background: #f5f5f5;
 }
 
 .postTexto {

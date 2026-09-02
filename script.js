@@ -341,7 +341,7 @@ function cargarPosts() {
         const dia = d.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
         const hora = d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
         const img = p.imagenId
-          ? '<img class="postImg" src="https://drive.google.com/uc?export=view&id=' + p.imagenId + '" alt="Post">'
+          ? '<img class="postImg" src="https://lh3.googleusercontent.com/d/' + p.imagenId + '=w800" alt="Post" onerror="this.src=\'https://drive.google.com/uc?export=view&id=' + p.imagenId + '\'">'
           : '';
         return '<div class="post">' + img +
           '<div class="postFecha">' + dia + ' · ' + hora +
