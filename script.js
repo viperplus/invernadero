@@ -424,3 +424,107 @@ sincronizarFlash();
 
 // Aplicar filtros por defecto (valores neutros, colores naturales)
 aplicarFiltros();
+
+// ===== Bitácora =====
+const BLOG_PASSWORD = 'INVERNADERO2026';
+
+function toggleBlogForm() {
+  const form = document.getElementById("blogForm");
+  form.classList.toggle("oculto");
+}
+
+function cargarPosts() {
+  fetch(APPS_SCRIPT_FOTOS_URL + "?accion=listarPosts&n=10&t=" + Date.now(), { cache: "no-store" })
+    .then((r) => r.json())
+    .then((datos) => {
+      const contenedor = document.getElementById("posts");
+      if (!datos.success || !datos.posts || datos.posts.length === 0) {
+        contenedor.innerHTML = '<div class="sinPosts">Todavía no hay publicaciones</div>';
+        return;
+      }
+      contenedor.innerHTML = datos.posts.map((p) => {
+        const fecha = new Date(p.fecha).toLocaleString();
+        const img = p.imagenId
+          ? '<img class="postImg" src="https://drive.google.com/uc?export=view&id=' + p.imagenId + '" alt="Post">'
+          : '';
+        return '<div class="post">' + img +
+          '<div class="postTexto">' + escapeHtml(p.texto) + '</div>' +
+          '<div class="postFecha">' + fecha + '</div></div>';
+      }).join("");
+    })
+    .catch(() => {});
+}
+
+function escapeHtml(t) {
+  const d = document.createElement("div");
+  d.textContent = t;
+  return d.innerHTML;
+}
+
+document.getElementById("postImagen").addEventListener("change", function () {
+  const preview = document.getElementById("blogPreview");
+  if (this.files && this.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      preview.innerHTML = '<img src="' + e.target.result + '" alt="Preview">';
+    };
+    reader.readAsDataURL(this.files[0]);
+  } else {
+    preview.innerHTML = "";
+  }
+});
+
+function publicarPost() {
+  const texto = document.getElementById("postTexto").value.trim();
+  const pass = document.getElementById("postPass").value;
+  const estado = document.getElementById("postEstado");
+  const archivo = document.getElementById("postImagen").files[0];
+
+  if (!texto) { estado.textContent = "Escribí algo"; estado.className = "postEstado error"; return; }
+  if (!pass) { estado.textContent = "Poné la contraseña"; estado.className = "postEstado error"; return; }
+
+  estado.textContent = "Publicando...";
+  estado.className = "postEstado";
+
+  if (archivo) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const b64 = e.target.result.split(",")[1];
+      enviarPost({ accion: "nuevoPost", texto: texto, imagen: b64, contrasena: pass });
+    };
+    reader.readAsDataURL(archivo);
+  } else {
+    enviarPost({ accion: "nuevoPost", texto: texto, contrasena: pass });
+  }
+}
+
+function enviarPost(payload) {
+  const estado = document.getElementById("postEstado");
+  fetch(APPS_SCRIPT_FOTOS_URL, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  })
+    .then((r) => r.json())
+    .then((datos) => {
+      if (datos.success) {
+        estado.textContent = "¡Publicado!";
+        estado.className = "postEstado ok";
+        document.getElementById("postTexto").value = "";
+        document.getElementById("postPass").value = "";
+        document.getElementById("postImagen").value = "";
+        document.getElementById("blogPreview").innerHTML = "";
+        cargarPosts();
+        setTimeout(() => { document.getElementById("blogForm").classList.add("oculto"); }, 1500);
+      } else {
+        estado.textContent = datos.error || "Error";
+        estado.className = "postEstado error";
+      }
+    })
+    .catch(() => {
+      estado.textContent = "Error de conexión";
+      estado.className = "postEstado error";
+    });
+}
+
+cargarPosts();
+setInterval(cargarPosts, 60000);

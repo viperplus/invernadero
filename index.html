@@ -115,6 +115,28 @@
       </video>
     </div>
 
+    <!-- Bitácora -->
+    <div class="tarjeta bitacora">
+      <div class="graficoTitulo">📝 Bitácora del invernadero</div>
+      <div id="posts"></div>
+
+      <button class="btn blogToggle" onclick="toggleBlogForm()">✏️ Escribir post</button>
+
+      <div id="blogForm" class="blogForm oculto">
+        <textarea id="postTexto" placeholder="Escribí tu publicación..." rows="3"></textarea>
+        <label class="blogFileLabel">
+          📷 Adjuntar imagen
+          <input type="file" id="postImagen" accept="image/*">
+        </label>
+        <div id="blogPreview" class="blogPreview"></div>
+        <div class="blogFormRow">
+          <input type="password" id="postPass" placeholder="Contraseña">
+          <button class="btn blogPublicar" onclick="publicarPost()">Publicar</button>
+        </div>
+        <div id="postEstado" class="postEstado"></div>
+      </div>
+    </div>
+
     <p class="nota">Los datos y las fotos se actualizan solos 🌻</p>
     <p class="nota esc">ESRN Rural Virtual</p>
   </div>

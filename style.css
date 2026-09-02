@@ -509,3 +509,138 @@ h1 {
   }
   h1 { font-size: 26px; }
 }
+
+/* ---------- Bitácora ---------- */
+.tarjeta.bitacora {
+  padding: 16px;
+  margin-bottom: 16px;
+  background: linear-gradient(180deg, #fef9ee 0%, #ffffff 100%);
+  border-color: #e8d48b;
+}
+
+.post {
+  background: #fafdf7;
+  border: 2px solid #d4e8c6;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.postImg {
+  width: 100%;
+  border-radius: 10px;
+  display: block;
+  margin-bottom: 8px;
+  max-height: 350px;
+  object-fit: cover;
+}
+
+.postTexto {
+  font-size: 15px;
+  color: #23302b;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.postFecha {
+  font-size: 12px;
+  color: #6b8177;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.blogToggle {
+  margin-top: 14px;
+}
+
+.blogForm {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.blogForm.oculto {
+  display: none;
+}
+
+.blogForm textarea {
+  font-family: "Baloo 2", "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 14px;
+  padding: 10px;
+  border: 2px solid #cfe8bd;
+  border-radius: 10px;
+  resize: vertical;
+  min-height: 70px;
+  outline: none;
+}
+
+.blogForm textarea:focus {
+  border-color: #66bb4f;
+}
+
+.blogFileLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4a6358;
+  cursor: pointer;
+}
+
+.blogFileLabel input[type="file"] {
+  display: none;
+}
+
+.blogPreview {
+  text-align: center;
+}
+
+.blogPreview img {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 10px;
+  border: 2px solid #cfe8bd;
+}
+
+.blogFormRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.blogFormRow input[type="password"] {
+  font-family: "Baloo 2", "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 13px;
+  padding: 6px 10px;
+  border: 2px solid #cfe8bd;
+  border-radius: 8px;
+  flex: 1;
+  max-width: 160px;
+  outline: none;
+}
+
+.blogPublicar {
+  background: linear-gradient(180deg, #f6a821 0%, #e08a00 100%);
+  box-shadow: 0 3px 8px rgba(224, 138, 0, 0.35);
+}
+
+.postEstado {
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  min-height: 20px;
+}
+
+.postEstado.ok {
+  color: #16a34a;
+}
+
+.postEstado.error {
+  color: #dc2626;
+}
+
+.sinPosts {
+  font-size: 14px;
+  color: #6b8177;
+  text-align: center;
+  padding: 16px;
+}
